@@ -171,7 +171,7 @@ void attention_v3_kernel(
 
       // prefetch V
       load_V(kv_id + 1);
-
+      // S scale and causal mask
       for (int mma_id_q = 0; mma_id_q < WARP_Q / MMA_M; mma_id_q++) {
         // apply softmax scale and causal mask
         for (int mma_id_kv = 0; mma_id_kv < BLOCK_KV / MMA_N; mma_id_kv++) {
@@ -200,6 +200,7 @@ void attention_v3_kernel(
           }
         }
 
+      // new m (max(old m, this tile max))
       // rowmax
       float this_rowmax[2] = {-FLT_MAX, -FLT_MAX};
       for (int mma_id_kv = 0; mma_id_kv < BLOCK_KV / MMA_N; mma_id_kv++) {
@@ -233,7 +234,7 @@ void attention_v3_kernel(
       rowmax[mma_id_q][0] = this_rowmax[0];
       rowmax[mma_id_q][1] = this_rowmax[1];
 
-      // rowsumexp
+      // rowsumexp + S -> P (exp(S - rowmax)) for next MMA
       float this_rowsumexp[2] = {};
       for (int mma_id_kv = 0; mma_id_kv < BLOCK_KV / MMA_N; mma_id_kv++) {
         float *regs = S_rmem[mma_id_q][mma_id_kv];
