@@ -174,3 +174,43 @@ cudaError_t reduceExecuteShflReduce(const T* d_input, T* d_output, size_t N) {
     return cudaGetLastError();
 }
 
+
+template <typename T>
+__global__ void reduceKernelShflReduceVec4(const T* d_input, T* d_output, size_t N) {
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int lane_id = threadIdx.x % 32; // 当前线程在 warp 中的 lane ID
+    int warp_id = threadIdx.x / 32; // 当前线程所在的 warp ID
+
+    __shared__ T smem[NUM_WARPS]; // 每个线程一个位置的共享内存
+    if (lane_id == 0) smem[warp_id] = 0; // 初始化共享内存
+
+    T val = 0;
+    for (int i = idx; i < N / 4; i += blockDim.x * gridDim.x) {
+        float4 tmp = reinterpret_cast<const float4*>(d_input)[i]; 
+        val += tmp.x + tmp.y + tmp.z + tmp.w;
+    }
+    val = warpReduceSum(val); // 在 warp 内进行归约
+
+    // warp 之间进行规约
+    // 1.warp内部的reduce结果写入smem 2. 每个warp的第一个线程读取smem进行全局规约
+    if (lane_id == 0){
+        smem[warp_id] = val; // 将每个 warp 的结果写入共享内存
+    }
+    __syncthreads(); // 确保所有 warp 都完成了写入
+    if (warp_id == 0){
+        val = (threadIdx.x < NUM_WARPS) ? smem[lane_id] : 0; // 只有前 NUM_WARPS 个线程参与规约
+        val = warpReduceSum(val); // 在第一个 warp 内进行规约
+        if (lane_id == 0) {
+            atomicAdd(d_output, val); // 将最终结果写入全局内存
+        }
+    }
+}
+
+template <typename T>
+cudaError_t reduceExecuteShflReduceVec4(const T* d_input, T* d_output, size_t N) {
+    int threads = 32 * NUM_WARPS;
+    int blocks = (N + threads - 1) / threads;
+    reduceKernelShflReduceVec4<T><<<blocks, threads>>>(d_input, d_output, N);
+    return cudaGetLastError();
+}

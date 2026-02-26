@@ -72,8 +72,7 @@ void benchmark(ReduceFunc<T> func, const char* kernel_name,
 }
 
 int main() {
-    // 定义向量大小：1000万个元素
-    size_t N = 10000000;
+    size_t N = 2 * 1024 * 1024;
     size_t bytes = N * sizeof(float);
 
     // 1. Host 端初始化
@@ -99,6 +98,8 @@ int main() {
     benchmark<float>(reduceExecuteSmemReduce<float>, "Shared Memory Reduce", 
                            d_input, d_output, N, (float)N);
     benchmark<float>(reduceExecuteShflReduce<float>, "Shuffle Reduce", 
+                           d_input, d_output, N, (float)N);
+    benchmark<float>(reduceExecuteShflReduceVec4<float>, "Shuffle Reduce Vec4", 
                            d_input, d_output, N, (float)N);
 
     // 4. 清理资源
