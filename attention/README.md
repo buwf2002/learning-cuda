@@ -1,6 +1,16 @@
-# FlashAttention 学习指南
+# FlashAttention 学习笔记
 
-本指南以 `attention_v3.cu` 为核心，系统讲解 FlashAttention 的原理与实现。
+本文记录学习 FlashAttention 的原理与CUDA实现。
+
+- 学习资料源自
+**特别注意Online softmax - Implementation**
+[FlashAttention Blog](https://gau-nernst.github.io/fa-5090/)
+
+我在这个博客的基础上做了两点改动:
+- 增加 GQA 和 causal mask。
+- 修改写回方式。
+  并通过 Nsight Compute 观察到写回没有合并访存，写回效率只有50%，所以通过 shared memory 优化了写回，使得写回效率100%。但这一过程因为引入了额外的 shared memory 写回操作，性能并没有提升(有空再看看能不能继续优化)。
+
 
 ---
 
@@ -458,60 +468,38 @@ for (int reg_id = 0; reg_id < 4; reg_id++) {
   }
 }
 ```
-
-**MMA 寄存器布局 (2x2 tile)：**
-```
-每个线程持有 2x2 的注意力分数：
-
-        K0    K1
-    ┌──────┬──────┐
-Q0  │ reg0 │ reg1 │
-    ├──────┼──────┤
-Q1  │ reg2 │ reg3 │
-    └──────┴──────┘
-
-reg0: (q_pos0, k_pos0)
-reg1: (q_pos0, k_pos1)
-reg2: (q_pos1, k_pos0)
-reg3: (q_pos1, k_pos1)
-```
 ---
 
 ## 6. 各版本实验结果对比
-
 ### 6.1 版本演进总结
 
-| 版本 | Block Q | Block KV | 关键优化 | 预期性能 |
-|------|---------|----------|----------|----------|
-| V1 | 128 | 64 | 基础实现 | 1.0× |
-| V2 | 64 | 64 | Swizzle 优化 | 1.3× |
-| **V3** | **64** | **32** | **异步拷贝 + 双缓冲** | **1.6×** |
-| V4 | 64 | 32 | ldmatrix x4 | 1.8× |
-| V5 | 64 | 64 | 分离 K/V 缓冲 | 1.9× |
-| V6 | 64 | 64 | 输出 Swizzle | 2.0× |
+实验GPU: NVIDIA GeForce RTX 4060 Laptop GPU
 
-### 6.3 性能瓶颈分析
+| Kernel           |   Latency (ms) |   TFLOPS |
+|:-----------------|---------------:|---------:|
+| F.sdpa() - FA    |         5.2808 |    52.05 |
+| F.sdpa() - CuDNN |         4.8333 |    56.87 |
+| flash-attn       |         4.8302 |    56.91 |
+| v1               |        14.0902 |    19.51 |
+| v2               |         5.1999 |    52.86 |
+| v3               |         5.1292 |    53.59 |
+| v4               |         4.8701 |    56.44 |
+| v5               |         4.9562 |    55.46 |
+| v6               |         4.9756 |    55.25 |
+
+### 6.3 版本信息
 
 ```
+V1: 基于Tensor Core的最基础实现
+
 V1 → V2: Swizzle 解决 Bank Conflict
-       └─→ 减少 shared memory 访问冲突
 
 V2 → V3: 异步拷贝隐藏内存延迟
-       └─→ 计算与数据传输重叠
 
 V3 → V4: ldmatrix x4 减少指令数
-       └─→ 4 元素加载从 2 条指令变为 1 条
 
-V4 → V5: V 单缓冲减少 SMEM 占用
-       └─→ 更大的 Block KV 提高计算效率
+V4 → V5: V 单缓冲减少
 
 V5 → V6: 输出 Swizzle + 优化存储
-       └─→ 减少 global memory 写入冲突
 ```
-
----
-
-## 核心解析参照
-**特别注意Online softmax - Implementation**
-1. [FlashAttention Blog](https://gau-nernst.github.io/fa-5090/)
 
