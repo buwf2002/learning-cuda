@@ -23,24 +23,28 @@ if __name__ == "__main__":
 
     baselines = {
         "PyTorch": (
-            lambda inp: benchmark(torch.softmax, inp, 1), 
+            lambda inp: benchmark(torch.softmax, inp, 1),
             lambda inp: torch.softmax(inp, dim=1) # 增加 dim=1
         ),
         "torch.compile": (
-            lambda inp: benchmark(compiled_softmax, inp, 1), 
+            lambda inp: benchmark(compiled_softmax, inp, 1),
             lambda inp: compiled_softmax(inp, dim=1) # 增加 dim=1
         ),
-        "Softmax naive": (
-            lambda inp: benchmark(my_module.softmax_naive, inp), 
-            my_module.softmax_naive
+        "Softmax SBR": (
+            lambda inp: benchmark(my_module.softmax_sbr, inp),
+            my_module.softmax_sbr
         ),
-        "Softmax vec4": (
-            lambda inp: benchmark(my_module.softmax_vec4, inp), 
-            my_module.softmax_vec4
+        "Softmax SBR V4": (
+            lambda inp: benchmark(my_module.softmax_sbr_v4, inp),
+            my_module.softmax_sbr_v4
         ),
-        "Softmax vec4 smem tree": (
-            lambda inp: benchmark(my_module.softmax_vec4_smem_tree, inp), 
-            my_module.softmax_vec4_smem_tree
+        "Softmax WR V4": (
+            lambda inp: benchmark(my_module.softmax_wr_v4, inp),
+            my_module.softmax_wr_v4
+        ),
+        "Softmax SBR WR V4": (
+            lambda inp: benchmark(my_module.softmax_sbr_wr_v4, inp),
+            my_module.softmax_sbr_wr_v4
         ),
     }
 

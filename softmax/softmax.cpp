@@ -3,9 +3,10 @@
 using softmax_fn = void (*)(const float *input, float *output, int M, int N);
 
 // Forward declaration of the CUDA kernel launcher
-void softmaxNaiveExec(const float* input, float* output, int m, int n);
-void softmaxVec4Exec(const float* input, float* output, int m, int n);
-void softmaxVec4SmemTreeExec(const float* input, float* output, int m, int n);
+void softmax_exec_sbr(const float* input, float* output, int m, int n);
+void softmax_exec_sbr_v4(const float* input, float* output, int m, int n);
+void softmax_exec_wr_v4(const float* input, float* output, int m, int n);
+void softmax_exec_sbr_wr_v4(const float* input, float* output, int m, int n);
 
 template<softmax_fn fn>
 torch::Tensor softmax(torch::Tensor input) {
@@ -20,7 +21,8 @@ torch::Tensor softmax(torch::Tensor input) {
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("softmax_naive", &softmax<softmaxNaiveExec>, "Naive softmax", py::arg("input"));
-    m.def("softmax_vec4", &softmax<softmaxVec4Exec>, "Naive softmax", py::arg("input"));
-    m.def("softmax_vec4_smem_tree", &softmax<softmaxVec4SmemTreeExec>, "Naive softmax", py::arg("input"));
+    m.def("softmax_sbr", &softmax<softmax_exec_sbr>, "Naive softmax", py::arg("input"));
+    m.def("softmax_sbr_v4", &softmax<softmax_exec_sbr_v4>, "Naive softmax", py::arg("input"));
+    m.def("softmax_wr_v4", &softmax<softmax_exec_wr_v4>, "Naive softmax", py::arg("input"));
+    m.def("softmax_sbr_wr_v4", &softmax<softmax_exec_sbr_wr_v4>, "Naive softmax", py::arg("input"));
 }
