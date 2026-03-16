@@ -9,7 +9,7 @@ def benchmark(f, *args):
 if __name__ == "__main__":
     my_module = torch.utils.cpp_extension.load(
         "module",
-        sources=["gemm_naive.cu", "gemm.cpp"],
+        sources=["gemm_simt.cu", "gemm.cpp"],
         extra_cuda_cflags=[
             "-O3",
             "-lineinfo",
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     compiled_matmul = torch.compile(torch.matmul)
     shapes = [
         (512, 512, 512),
+        (4096, 4096, 4096),
         (8192, 8192, 8192),
-        (4096, 4096, 4096)
     ]
 
     baselines = {
@@ -40,6 +40,10 @@ if __name__ == "__main__":
         "GeMM Block Tile": (
             lambda lhs, rhs: benchmark(my_module.gemm_block_tile, lhs, rhs),
             lambda lhs, rhs: my_module.gemm_block_tile(lhs, rhs)
+        ),
+        "GeMM Block Tile Double buffer": (
+            lambda lhs, rhs: benchmark(my_module.gemm_block_tile_double_buffer, lhs, rhs),
+            lambda lhs, rhs: my_module.gemm_block_tile_double_buffer(lhs, rhs)
         )
     }
 

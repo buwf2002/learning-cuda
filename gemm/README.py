@@ -1,9 +1,11 @@
+## GEMM with SIMT (CUDA Core)
 
+### baseline
 
 
 LHS : RHS both of Row-Major
 
-Tips: block x,y,z这个顺序, 假如是x维度上先凑成一个warp, 在矩阵维度映射的时候, 变化快的维度, 对应x, 维度
+Tips: block x,y,z这个顺序, 是x维度上先凑成一个warp, 在矩阵维度映射的时候, 变化快的维度, 对应x维度
 1. 
 
 int m_idx = blockIdx.x * BM + threadIdx.x;

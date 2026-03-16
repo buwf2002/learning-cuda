@@ -10,6 +10,7 @@ using gemm_fn = void (*)(
 // Forward declaration of the CUDA kernel launcher
 void gemm_naive(const float* A, const float* B, float *C, int m, int n, int k);
 void gemm_block_tile(const float* A, const float* B, float *C, int m, int n, int k);
+void gemm_block_tile_double_buffer(const float* A, const float* B, float *C, int m, int n, int k);
 
 template<gemm_fn fn>
 torch::Tensor gemm(
@@ -30,4 +31,5 @@ torch::Tensor gemm(
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("gemm_naive", &gemm<gemm_naive>, "Naive gemm");
     m.def("gemm_block_tile", &gemm<gemm_block_tile>, "Block tile gemm");
+    m.def("gemm_block_tile_double_buffer", &gemm<gemm_block_tile_double_buffer>, "Block tile gemm with double buffer");
 }
