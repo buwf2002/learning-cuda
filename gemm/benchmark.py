@@ -3,6 +3,8 @@ from triton.testing import do_bench
 import torch.utils.cpp_extension
 from tabulate import tabulate
 
+torch.backends.cuda.matmul.allow_tf32 = False
+
 def benchmark(f, *args):
     return do_bench(lambda: f(*args), return_mode="median") * 1e3  # return in us
 
@@ -48,6 +50,10 @@ if __name__ == "__main__":
         "GeMM Block Thread Tile": (
             lambda lhs, rhs: benchmark(my_module.gemm_block_thread_tile, lhs, rhs),
             lambda lhs, rhs: my_module.gemm_block_thread_tile(lhs, rhs)
+        ),
+        "GeMM Block Thread Tile Double Buffer": (
+            lambda lhs, rhs: benchmark(my_module.gemm_block_thread_tile_double_buffer, lhs, rhs),
+            lambda lhs, rhs: my_module.gemm_block_thread_tile_double_buffer(lhs, rhs)
         )
     }
 
