@@ -15,13 +15,14 @@ General Matrix Multiplication (GEMM) is a fundamental operation in deep learning
 
 LHS × RHS, both Row-Major
 
-| Baseline                      |   (512, 512, 512) |   (4096, 4096, 4096) |   (8192, 8192, 8192) |
+| Baseline(unit:us)             |   (512, 512, 512) |   (4096, 4096, 4096) |   (8192, 8192, 8192) |
 |-------------------------------|-------------------|----------------------|----------------------|
-| Torch Matmul                  |             58.37 |              15697.9 |     130901           |
-| Torch Compile                 |             56.32 |              15795.2 |     130235           |
-| GeMM Naive                    |            310.18 |             171854   |          1.38876e+06 |
-| GeMM Block Tile               |            261.12 |             125618   |          1.02578e+06 |
-| GeMM Block Tile Double buffer |            254.98 |             119345   |     950327           |
+| Torch Matmul                  |             22.53 |              3592.91 |              28246   |
+| Torch Compile                 |             22.53 |              3578.48 |              28219.4 |
+| GeMM Naive                    |            121.31 |             44010.5  |             453470   |
+| GeMM Block Tile               |             88.06 |             31321.1  |             272022   |
+| GeMM Block Tile Double buffer |             83.97 |             29896.7  |             256891   |
+| GeMM Block Thread Tile        |            126.98 |              7165.95 |              52083.7 |
 
 > **Tip:** Thread indexing order matters. The `x` dimension forms warps first. When mapping to matrix dimensions, the faster-changing dimension should correspond to the `x` dimension.
 

@@ -44,6 +44,10 @@ if __name__ == "__main__":
         "GeMM Block Tile Double buffer": (
             lambda lhs, rhs: benchmark(my_module.gemm_block_tile_double_buffer, lhs, rhs),
             lambda lhs, rhs: my_module.gemm_block_tile_double_buffer(lhs, rhs)
+        ),
+        "GeMM Block Thread Tile": (
+            lambda lhs, rhs: benchmark(my_module.gemm_block_thread_tile, lhs, rhs),
+            lambda lhs, rhs: my_module.gemm_block_thread_tile(lhs, rhs)
         )
     }
 
@@ -64,7 +68,8 @@ if __name__ == "__main__":
         table_data.append(row)
 
     # Create header
-    header = ["Baseline"] + [f"({M}, {N}, {K})" for M, N, K in shapes]
+    header = ["Baseline(unit:us)"] + [f"({M}, {N}, {K})" for M, N, K in shapes]
 
     # Print as markdown table
+    print()
     print(tabulate(table_data, headers=header, tablefmt="github"))
