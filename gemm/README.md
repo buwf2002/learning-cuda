@@ -1,28 +1,21 @@
 ## GEMM with SIMT (CUDA Core)
 
-### Introduction
-
-General Matrix Multiplication (GEMM) is a fundamental operation in deep learning and high-performance computing. This module explores GEMM optimization using CUDA's SIMT (Single Instruction, Multiple Threads) architecture on CUDA Cores.
-
 **GEMM Formula:** `C = A × B`, where A, B, C are matrices with dimensions `(M×K)`, `(K×N)`, and `(M×N)` respectively.
 
-**Key Optimization Techniques:**
-- Thread block tiling for shared memory reuse
-- Warp-level parallelism with proper thread indexing
-- Memory access pattern optimization (row-major layout)
 
 ### Baseline
 
 LHS × RHS, both Row-Major
 
-| Baseline(unit:us)             |   (512, 512, 512) |   (4096, 4096, 4096) |   (8192, 8192, 8192) |
-|-------------------------------|-------------------|----------------------|----------------------|
-| Torch Matmul                  |             22.53 |              3592.91 |              28246   |
-| Torch Compile                 |             22.53 |              3578.48 |              28219.4 |
-| GeMM Naive                    |            121.31 |             44010.5  |             453470   |
-| GeMM Block Tile               |             88.06 |             31321.1  |             272022   |
-| GeMM Block Tile Double buffer |             83.97 |             29896.7  |             256891   |
-| GeMM Block Thread Tile        |            126.98 |              7165.95 |              52083.7 |
+| Baseline(unit:us)                    |   (512, 512, 512) |   (4096, 4096, 4096) |   (8192, 8192, 8192) |
+|--------------------------------------|-------------------|----------------------|----------------------|
+| Torch Matmul                         |             22.53 |              3586.96 |              28594.2 |
+| Torch Compile                        |             22.5  |              3574.62 |              28338.2 |
+| GeMM Naive                           |            120.86 |             43993.6  |             452375   |
+| GeMM Block Tile                      |             88.06 |             31353.9  |             274077   |
+| GeMM Block Tile Double buffer        |             83.97 |             29892.6  |             257117   |
+| GeMM Block Thread Tile               |            126.98 |              7118.85 |              52018.2 |
+| GeMM Block Thread Tile Double Buffer |            117.36 |              9826.3  |              77100.1 |
 
 > **Tip:** Thread indexing order matters. The `x` dimension forms warps first. When mapping to matrix dimensions, the faster-changing dimension should correspond to the `x` dimension.
 
