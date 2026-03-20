@@ -161,3 +161,89 @@ void gemm_block_tile_double_buffer(
     dim3 grid((m + BM - 1) / BM, (n + BN - 1) / BN);
     gemm_kernel_block_tile_double_buffer<BM, BN, BK><<<grid, block>>>(A, B, C, m, n, k);
 }
+
+// thread tiling
+template<int BM, int BN, int BK, int TM, int TN, int BLOCK_SIZE>
+__global__ void gemm_kernel_block_thread_tile(
+    const float* __restrict__ A,
+    const float* __restrict__ B,
+    float * __restrict__ C,
+    int m, int n, int k
+){
+    int m_offset = blockIdx.x * BM;
+    int n_offset = blockIdx.y * BN;
+    
+    int tid = threadIdx.x;
+    
+    int num_thread_per_row = BN / TN;
+
+    int row_thread_idx = threadIdx.x / num_thread_per_row;
+    int col_thread_idx = threadIdx.x % num_thread_per_row;
+
+    __shared__ float As[BM][BK];
+    __shared__ float Bs[BK][BN];
+
+    float Ar[TM] = {};
+    float Br[TN] = {};
+    float Cr[TM][TN] = {};
+
+    float *A_ptr = A + m_offset * k;
+    float *B_ptr = B + n_offset;
+
+    // load a cooperatate with all thread within current block.
+    auto load_a_to_smem = [&](int k_iter_idx)
+    {
+        for (int i = tid; i < BM * BK; i += BLOCK_SIZE)
+        {
+            int row = tid / BK;
+            int col = tid % BK;
+            As[row][col] = (m_offset + row < m && k_iter_idx * BK + col < k) ? *(A_ptr + k_iter_idx * BK + col) : 0;
+        }
+    };
+
+    auto load_b_to_smem = [&](int k_iter_idx)
+    {
+        for (int i = tid; i < BK * BN; i += BLOCK_SIZE)
+        {
+            int row = tid / BN;
+            int col = tid % BN;
+            Bs[row][col] = (k_iter_idx * BK + row < k && n_offset + col < n) ? *(B_ptr + (k_iter_idx * BK + row) * n + col) : 0;
+        }
+    };
+
+    const int k_iter = (k + BK - 1) / BK;
+
+    float sum = 0;
+    #pragma unroll
+    for(int i = 0; i < k_iter; i++){
+        load_a_to_smem(i);
+        load_b_to_smem(i);
+        __syncthreads();
+
+
+    }
+
+    if (m_idx + threadIdx.y < m && n_idx + threadIdx.x < n) {
+        C[(m_idx + threadIdx.y) * n + (n_idx + threadIdx.x)] = sum;
+    }
+}
+
+void gemm_block_tile(
+    const float* __restrict__ A, 
+    const float* __restrict__ B,
+    float * __restrict__ C, 
+    int m, int n, int k
+){
+    const int BM = 128;
+    const int BN = 128;
+    const int BK = 32;
+    const int TM = 8;
+    const int TN = 8;
+
+    const int BLOCK_SIZE = (BM * BN) / (TM * TN);
+
+    // const int BLK = BM * BN;
+    dim3 block(BLOCK_SIZE, 1, 1);
+    dim3 grid((m + BM - 1) / BM, (n + BN - 1) / BN);
+    gemm_kernel_block_thread_tile<BM, BN, BK, TM, TN><<<grid, block>>>(A, B, C, m, n, k);
+}

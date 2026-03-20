@@ -1,5 +1,5 @@
 third_party/
 *ncu-rep
 *test_v3.py
-*benchmark_reduce
-*.o
+*benchmark_reduce*
+*.o*
